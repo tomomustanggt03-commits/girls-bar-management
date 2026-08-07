@@ -1,0 +1,3 @@
+import crypto from "crypto";
+function makeToken(secret){const day=new Date().toISOString().slice(0,10);return crypto.createHmac("sha256",secret).update("girlsbar:"+day).digest("hex")}
+export default async function handler(req,res){const secret=process.env.SESSION_SECRET;if(!secret)return res.status(503).end();const cookie=req.headers.cookie||"";const m=cookie.match(/(?:^|;\s*)girlsbar_session=([^;]+)/);if(!m)return res.status(401).end();const expected=makeToken(secret);if(m[1]!==expected)return res.status(401).end();return res.status(200).json({ok:true})}
