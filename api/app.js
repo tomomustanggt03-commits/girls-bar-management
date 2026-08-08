@@ -5,7 +5,7 @@ export default function handler(req,res){
   try{
     const file=path.join(process.cwd(),'index.html');
     let html=fs.readFileSync(file,'utf8');
-    html=html.replace('<script>','<script src="/sync.js"></script><script>');
+    html=html.replace('</body>','<script src="/sync.js?v=3"></script></body>');
     html=html.replace('データはブラウザ内に保存されます','データはPC・スマホで共通保存されます');
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store');
