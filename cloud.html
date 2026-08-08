@@ -1,0 +1,10 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ガールズバー経営管理</title></head><body><div style="font-family:sans-serif;padding:24px">同期版を読み込み中...</div><script>
+(async()=>{
+  try{
+    let html=await fetch('/index.html?cloud='+Date.now(),{cache:'no-store'}).then(r=>r.text());
+    html=html.replace('データはブラウザ内に保存されます','データはPC・スマホで共通保存されます');
+    html=html.replace('</body>','<script src="/sync.js?v='+Date.now()+'"><\/script></body>');
+    document.open();document.write(html);document.close();
+  }catch(e){document.body.innerHTML='<div style="font-family:sans-serif;padding:24px;color:#c00">同期版の読み込みに失敗しました。通常版をご利用ください。</div>'}
+})();
+</script></body></html>
