@@ -41,11 +41,8 @@
   }
 
   save=function(){normalize();backup();render();push()};
-
-  const oldLogin=loginBtn.onclick;
-  loginBtn.onclick=async function(ev){await oldLogin.call(this,ev);setTimeout(()=>pull(true),300)};
-
+  loginBtn.addEventListener('click',()=>setTimeout(()=>pull(true),900));
   window.addEventListener('focus',()=>{if(Date.now()-lastPull>1500)pull(false)});
   setInterval(()=>pull(false),5000);
-  setTimeout(()=>pull(true),500);
+  setTimeout(()=>pull(true),1200);
 })();
