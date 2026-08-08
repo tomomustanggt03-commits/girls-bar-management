@@ -1,10 +1,7 @@
 {
   "cleanUrls": true,
-  "routes": [
-    {"src":"/api/(.*)","dest":"/api/$1"},
-    {"src":"/$","dest":"/api/app"},
-    {"handle":"filesystem"},
-    {"src":"/(.*)","dest":"/index.html"}
+  "redirects": [
+    {"source":"/","destination":"/api/app","permanent":false}
   ],
   "headers": [
     {"source":"/(.*)","headers":[
