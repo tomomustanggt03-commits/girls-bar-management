@@ -1,36 +1,51 @@
 (function(){
   const KEY='girlsbar_state';
-  const nativeGet=Storage.prototype.getItem;
-  const nativeSet=Storage.prototype.setItem;
-  let syncing=false;
-  function local(){try{return nativeGet.call(localStorage,KEY)}catch(e){return null}}
-  function writeLocal(v){try{nativeSet.call(localStorage,KEY,v)}catch(e){}}
-  try{
-    const xhr=new XMLHttpRequest();
-    xhr.open('GET','/api/state',false);
-    xhr.send(null);
-    if(xhr.status===200){
-      const res=JSON.parse(xhr.responseText||'{}');
-      if(res&&res.data){
-        writeLocal(JSON.stringify(res.data));
-      }else{
-        const existing=local();
-        if(existing){
-          const seed=new XMLHttpRequest();
-          seed.open('PUT','/api/state',false);
-          seed.setRequestHeader('Content-Type','application/json');
-          seed.send(JSON.stringify({data:JSON.parse(existing)}));
-        }
-      }
-    }
-  }catch(e){console.warn('Cloud sync init failed',e)}
-  Storage.prototype.setItem=function(k,v){
-    nativeSet.call(this,k,v);
-    if(this===localStorage&&k===KEY&&!syncing){
-      try{
-        syncing=true;
-        fetch('/api/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:JSON.parse(v)})}).catch(()=>{}).finally(()=>{syncing=false});
-      }catch(e){syncing=false}
-    }
-  };
+  let syncing=false,lastPull=0;
+
+  function normalize(){
+    state=state||{};
+    state.daily=Array.isArray(state.daily)?state.daily:[];
+    state.staff=Array.isArray(state.staff)?state.staff:[];
+    state.plan=state.plan||defaultPlan;
+    state.variable=state.variable||{};
+    state.castSettings=state.castSettings||{};
+  }
+  function backup(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+  function mark(text){const f=document.querySelector('.footer span:first-child');if(f)f.textContent=text}
+
+  async function push(){
+    if(syncing)return;
+    syncing=true;
+    try{
+      const r=await fetch('/api/state',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:state})});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      mark('データはクラウドでPC・スマホ同期されます');
+    }catch(e){console.warn('cloud save failed',e);mark('クラウド同期エラー：再読み込みしてください')}
+    finally{syncing=false}
+  }
+
+  async function pull(seed){
+    if(syncing)return;
+    try{
+      const r=await fetch('/api/state',{credentials:'same-origin',cache:'no-store'});
+      if(!r.ok)return;
+      const j=await r.json();
+      if(j&&j.data){
+        state=j.data;normalize();backup();
+        if(typeof loadPlan==='function')loadPlan();
+        if(typeof render==='function')render();
+        mark('データはクラウドでPC・スマホ同期されます');
+      }else if(seed){normalize();backup();await push()}
+      lastPull=Date.now();
+    }catch(e){console.warn('cloud load failed',e)}
+  }
+
+  save=function(){normalize();backup();render();push()};
+
+  const oldLogin=loginBtn.onclick;
+  loginBtn.onclick=async function(ev){await oldLogin.call(this,ev);setTimeout(()=>pull(true),300)};
+
+  window.addEventListener('focus',()=>{if(Date.now()-lastPull>1500)pull(false)});
+  setInterval(()=>pull(false),5000);
+  setTimeout(()=>pull(true),500);
 })();
