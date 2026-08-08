@@ -1,0 +1,11 @@
+const fs=require('fs');
+const path=require('path');
+const out=path.join(__dirname,'dist');
+fs.rmSync(out,{recursive:true,force:true});
+fs.mkdirSync(out,{recursive:true});
+let html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
+if(!html.includes('/sync.js')) html=html.replace('</body>','<script src="/sync.js?v=1"></script></body>');
+html=html.replace('データはブラウザ内に保存されます','データはクラウドでPC・スマホ同期されます');
+fs.writeFileSync(path.join(out,'index.html'),html);
+for(const f of ['sync.js']) fs.copyFileSync(path.join(__dirname,f),path.join(out,f));
+console.log('Built synced app into dist/');
