@@ -1,13 +1,107 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ガールズバー経営管理</title></head><body><div style="font-family:sans-serif;padding:24px">同期版を読み込み中...</div><script>
-(async()=>{
-  try{
-    let html=await fetch('/index.html?cloud='+Date.now(),{cache:'no-store'}).then(r=>r.text());
-    const diag=`<div id="cloudDiag" style="position:fixed;right:10px;bottom:10px;z-index:100000;background:#111;color:#fff;padding:10px 12px;border-radius:9px;font:12px sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25)">同期API: 確認中...</div>`;
-    const probe=`<script>(function(){async function p(){var d=document.getElementById('cloudDiag');try{var r=await fetch('/api/state?probe='+Date.now(),{credentials:'same-origin',cache:'no-store'});if(d)d.textContent='同期API: HTTP '+r.status+(r.ok?' OK':'');}catch(e){if(d)d.textContent='同期API: 通信失敗';}}window.addEventListener('load',function(){setTimeout(p,300);setTimeout(p,1800);var b=document.getElementById('loginBtn');if(b)b.addEventListener('click',function(){setTimeout(p,1200);});});setInterval(p,8000);})();<\/script><script src="/sync.js?v=${Date.now()}"><\/script>`;
-    html=html.replace('<body>','<body>'+diag);
-    html=html.replace('データはブラウザ内に保存されます','データはPC・スマホで共通保存されます');
-    html=html.replace('</body>',probe+'</body>');
-    document.open();document.write(html);document.close();
-  }catch(e){document.body.innerHTML='<div style="font-family:sans-serif;padding:24px;color:#c00">同期版の読み込みに失敗しました。通常版をご利用ください。<br>'+String(e)+'</div>'}
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ガールズバー経営管理</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f6f8fb}
+#app{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+#syncStatus{position:fixed;right:10px;bottom:10px;z-index:999999;padding:7px 10px;border-radius:999px;background:rgba(17,24,39,.88);color:#fff;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.18);pointer-events:none}
+</style>
+</head>
+<body>
+<iframe id="app" src="/index.html"></iframe>
+<div id="syncStatus">同期：ログイン待ち</div>
+<script>
+(function(){
+  const KEY='girlsbar_state';
+  const frame=document.getElementById('app');
+  const badge=document.getElementById('syncStatus');
+  let lastLocal=localStorage.getItem(KEY)||'';
+  let lastCloud='';
+  let ready=false;
+  let applying=false;
+  let pushing=false;
+
+  function text(v){badge.textContent=v}
+  function canonical(v){try{return JSON.stringify(v)}catch(e){return ''}}
+  function reloadApp(){
+    applying=true;
+    frame.src='/index.html?sync='+Date.now();
+    setTimeout(()=>{applying=false},1200);
+  }
+
+  async function pull(){
+    try{
+      const r=await fetch('/api/state?ts='+Date.now(),{credentials:'same-origin',cache:'no-store'});
+      if(r.status===401){text('同期：ログイン待ち');return}
+      if(!r.ok){text('同期エラー HTTP '+r.status);return}
+      const j=await r.json();
+      const remote=j&&j.data?canonical(j.data):'';
+      const local=localStorage.getItem(KEY)||'';
+
+      if(!ready){
+        ready=true;
+        if(remote){
+          lastCloud=remote;
+          if(local!==remote){
+            localStorage.setItem(KEY,remote);
+            lastLocal=remote;
+            reloadApp();
+          }else lastLocal=local;
+          text('同期：接続済み');
+        }else if(local){
+          lastLocal=local;
+          await push(local);
+        }else{
+          lastCloud='';
+          lastLocal='';
+          text('同期：接続済み');
+        }
+        return;
+      }
+
+      if(remote && remote!==lastCloud){
+        lastCloud=remote;
+        if(local!==remote){
+          localStorage.setItem(KEY,remote);
+          lastLocal=remote;
+          reloadApp();
+        }
+      }
+      text('同期：接続済み');
+    }catch(e){text('同期：通信エラー')}
+  }
+
+  async function push(payload){
+    if(pushing||!payload)return;
+    pushing=true;
+    try{
+      const data=JSON.parse(payload);
+      const r=await fetch('/api/state',{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({data})});
+      if(r.status===401){text('同期：ログイン待ち');return}
+      if(!r.ok){text('保存エラー HTTP '+r.status);return}
+      lastCloud=payload;
+      text('同期：保存済み');
+    }catch(e){text('同期：保存エラー')}
+    finally{pushing=false}
+  }
+
+  setInterval(()=>{
+    if(applying||!ready)return;
+    const current=localStorage.getItem(KEY)||'';
+    if(current && current!==lastLocal){
+      lastLocal=current;
+      push(current);
+    }
+  },700);
+
+  setInterval(pull,2500);
+  window.addEventListener('focus',pull);
+  frame.addEventListener('load',()=>setTimeout(pull,400));
+  pull();
 })();
-</script></body></html>
+</script>
+</body>
+</html>
