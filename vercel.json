@@ -1,5 +1,8 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    {"source":"/cloud","destination":"/api/app","permanent":false}
+  ],
   "headers": [
     {"source":"/(.*)","headers":[
       {"key":"X-Frame-Options","value":"SAMEORIGIN"},
