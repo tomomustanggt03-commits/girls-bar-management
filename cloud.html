@@ -1,6 +1,8 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ガールズバー経営管理</title></head><body><div style="font-family:sans-serif;padding:24px">同期版を読み込み中...</div><script>
 (async()=>{
   try{
+    // Direct probe: this must appear in Vercel logs even before the sync script loads.
+    try{await fetch('/api/state?probe='+Date.now(),{credentials:'same-origin',cache:'no-store'})}catch(e){}
     let html=await fetch('/index.html?cloud='+Date.now(),{cache:'no-store'}).then(r=>r.text());
     html=html.replace('データはブラウザ内に保存されます','データはPC・スマホで共通保存されます');
     html=html.replace('</body>','<script src="/sync.js?v='+Date.now()+'"><\/script></body>');
